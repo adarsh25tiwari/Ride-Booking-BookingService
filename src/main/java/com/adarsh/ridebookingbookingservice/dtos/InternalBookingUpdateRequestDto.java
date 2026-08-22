@@ -3,14 +3,12 @@ package com.adarsh.ridebookingbookingservice.dtos;
 import com.adarsh.RideBooking_EntityService.models.BookingStatus;
 import lombok.*;
 
-import java.util.Optional;
-
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
-public class UpdateBookingRequestDto {
-    private BookingStatus  bookingStatus;
-    //private Optional<Long> driverId;
+public class InternalBookingUpdateRequestDto {
+    private Long driverId;
+    private BookingStatus bookingStatus;
 }

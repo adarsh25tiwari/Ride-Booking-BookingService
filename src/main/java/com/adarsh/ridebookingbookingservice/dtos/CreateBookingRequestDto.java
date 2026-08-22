@@ -9,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 public class CreateBookingRequestDto {
-   private Long passengerId;
+   //private Long passengerId;
    private ExactLocation startLocation;
    private ExactLocation endLocation;
 }

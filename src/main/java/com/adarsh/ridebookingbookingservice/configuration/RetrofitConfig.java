@@ -1,6 +1,8 @@
 package com.adarsh.ridebookingbookingservice.configuration;
 
+import com.adarsh.ridebookingbookingservice.apis.AuthServiceApi;
 import com.adarsh.ridebookingbookingservice.apis.LocationServiceApi;
+import com.adarsh.ridebookingbookingservice.apis.SocketServiceApi;
 import com.netflix.discovery.EurekaClient;
 import okhttp3.OkHttpClient;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +30,29 @@ public class RetrofitConfig {
                 .client(new OkHttpClient.Builder().build())
                 .build()
                 .create(LocationServiceApi.class);
+    }
+
+
+    @Bean
+    public AuthServiceApi authServiceApi() {
+
+        return new Retrofit.Builder()
+                .baseUrl(getServiceUrl("RIDEBOOKING-AUTHSERVICE"))
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(new OkHttpClient.Builder().build())
+                .build()
+                .create(AuthServiceApi.class);
+    }
+
+
+    @Bean
+    public SocketServiceApi socketServiceApi() {
+        return new Retrofit.Builder()
+                .baseUrl(getServiceUrl("RIDEBOOKING-SOCKETSERVICE"))
+                .addConverterFactory(GsonConverterFactory.create())
+                .client(new OkHttpClient.Builder().build())
+                .build()
+                .create(SocketServiceApi.class);
     }
 
 
