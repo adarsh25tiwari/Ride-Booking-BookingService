@@ -265,39 +265,48 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public UpdateBookingResponseDto internalUpdateBooking(Long bookingId, InternalBookingUpdateRequestDto requestDto) {
-        Booking booking = bookingRepository.findById(bookingId)
+      /*  Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() ->
                         new RuntimeException("Booking not found"));
 
         // Only an unassigned booking can be assigned
         if (booking.getBookingStatus() != BookingStatus.ASSIGNING_DRIVER) {
             throw new RuntimeException("Booking already assigned");
-        }
+        }  */
 
         if (requestDto.getDriverId() == null) {
             throw new RuntimeException("Driver ID is required");
         }
 
-        if (requestDto.getBookingStatus() == null) {
-            throw new RuntimeException("Booking status is required");
+        Driver driver = driverRepository.findById(requestDto.getDriverId())
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
+
+        // TEMPORARY - only for concurrency testing
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Thread interrupted", e);
         }
 
-        Driver driver = driverRepository.findById(requestDto.getDriverId()).orElseThrow(() ->
-                new RuntimeException("Driver not found"));
-
-        bookingRepository.updateBookingStatusAndDriverById(
+        // ATOMIC DRIVER ASSIGNMENT
+        int updatedRow = bookingRepository.assignDriverToBooking(
                 bookingId,
-                requestDto.getBookingStatus(),
+                BookingStatus.ASSIGNING_DRIVER,
+                BookingStatus.SCHEDULED,
                 driver
         );
 
-        System.out.println("Booking " + bookingId + " assigned to driver " + driver.getId());
+        if (updatedRow == 0) {
+            throw new RuntimeException("Ride is already assigned to another driver or is no longer available");
+        }
+
+        System.out.println("Booking " + bookingId +" assigned to driver " + driver.getId());
         // Reload updated booking
-        booking = bookingRepository.findById(bookingId)
+        Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
         Passenger passenger = booking.getPassenger();
-
         PassengerResponseDto passengerResponseDto = new PassengerResponseDto(
                         passenger.getId(),
                         passenger.getName(),
