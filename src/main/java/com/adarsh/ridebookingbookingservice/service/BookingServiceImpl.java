@@ -334,14 +334,9 @@ public class BookingServiceImpl implements BookingService {
         call.enqueue(new Callback<DriverLocationDto[]>() {
 
             @Override
-            public void onResponse(
-                    Call<DriverLocationDto[]> call,
-                    Response<DriverLocationDto[]> response) {
-
+            public void onResponse(Call<DriverLocationDto[]> call, Response<DriverLocationDto[]> response) {
                 if (response.isSuccessful() && response.body() != null) {
-
-                    List<DriverLocationDto> driverLocations =
-                            Arrays.asList(response.body());
+                    List<DriverLocationDto> driverLocations = Arrays.asList(response.body());
 
                     driverLocations.forEach(driverLocation -> {
                         System.out.println(
@@ -360,15 +355,13 @@ public class BookingServiceImpl implements BookingService {
                     System.out.println("Nearby Driver IDs: " + driverIds);
 
                     // Send ride request to Socket Service
-                    raiseRideRequestAsync(
-                            RideRequestDto.builder()
+                    raiseRideRequestAsync(RideRequestDto.builder()
                                     .driverIds(driverIds)
                                     .bookingId(bookingId)
                                     .build()
                     );
 
                 } else {
-
                     System.out.println("Request failed");
                     System.out.println("HTTP Code: " + response.code());
                     System.out.println("Message: " + response.message());
@@ -377,10 +370,7 @@ public class BookingServiceImpl implements BookingService {
             }
 
             @Override
-            public void onFailure(
-                    Call<DriverLocationDto[]> call,
-                    Throwable throwable) {
-
+            public void onFailure(Call<DriverLocationDto[]> call, Throwable throwable) {
                 throwable.printStackTrace();
             }
         });
@@ -390,35 +380,27 @@ public class BookingServiceImpl implements BookingService {
 
     private void raiseRideRequestAsync(RideRequestDto requestDto){
         Call<Boolean> call = socketServiceApi.sendNewRideRequest(requestDto);
-
         call.enqueue(new Callback<Boolean>() {
-
             @Override
-            public void onResponse(
-                    Call<Boolean> call,
-                    Response<Boolean> response) {
+            public void onResponse(Call<Boolean> call, Response<Boolean> response) {
+                System.out.println("Socket Service HTTP Status: "+ response.code());
 
                 if (response.isSuccessful() && response.body() != null) {
-                    Boolean result = response.body();
-                    System.out.println("Ride request sent to Socket Service: " + result);
+                    System.out.println("Ride request sent to Socket Service: " + response.body());
                 } else {
-                    System.out.println("Socket Service request failed: " + response.message());
+                    System.out.println("Socket Service request failed: "+ response.message());
                 }
             }
 
             @Override
-            public void onFailure(
-                    Call<Boolean> call,
-                    Throwable throwable) {
-
+            public void onFailure(Call<Boolean> call, Throwable throwable) {
+                System.out.println("Socket Service call FAILED");
                 throwable.printStackTrace();
             }
         });
 
 
     }
-
-
 
 
 }

@@ -47,6 +47,13 @@ public class RetrofitConfig {
 
     @Bean
     public SocketServiceApi socketServiceApi() {
+        //testing
+        String serviceUrl = getServiceUrl("RIDEBOOKING-SOCKETSERVICE");
+
+        System.out.println(
+                "SOCKET SERVICE URL = " + serviceUrl
+        );
+
         return new Retrofit.Builder()
                 .baseUrl(getServiceUrl("RIDEBOOKING-SOCKETSERVICE"))
                 .addConverterFactory(GsonConverterFactory.create())
