@@ -35,7 +35,7 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
 
-    implementation'com.adarsh:RideBooking-EntityService:0.0.6-SNAPSHOT'
+    implementation'com.adarsh:RideBooking-EntityService:0.0.7-SNAPSHOT'
 
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.retrofit2:converter-jackson:2.11.0'

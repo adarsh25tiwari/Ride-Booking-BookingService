@@ -51,4 +51,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("newStatus") BookingStatus newStatus,
             @Param("driver") Driver driver
     );
+
 }

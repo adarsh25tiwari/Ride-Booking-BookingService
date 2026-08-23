@@ -40,4 +40,14 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.internalUpdateBooking(bookingId, requestDto));
     }
 
+    // get bookings
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<UpdateBookingResponseDto> getBooking(
+            @PathVariable Long bookingId) {
+
+        return ResponseEntity.ok(
+                bookingService.getBooking(bookingId)
+        );
+    }
+
 }

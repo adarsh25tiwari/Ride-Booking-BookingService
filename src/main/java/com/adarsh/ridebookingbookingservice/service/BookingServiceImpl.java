@@ -146,6 +146,19 @@ public class BookingServiceImpl implements BookingService {
                 .map(Long::parseLong)
                 .toList();
 
+        //handling empty drivers
+        if (driverIds.isEmpty()) {
+
+            newBooking.setBookingStatus(BookingStatus.NO_DRIVER_AVAILABLE);
+            bookingRepository.save(newBooking);
+
+            return CreateBookingResponseDto.builder()
+                    .bookingId(newBooking.getId())
+                    .bookingStatus(newBooking.getBookingStatus().toString())
+                    .driver(Optional.empty())
+                    .build();
+        }
+
 
         System.out.println("Nearby Driver IDs: " + driverIds);
         RideRequestDto rideRequestDto = RideRequestDto.builder()
@@ -319,6 +332,38 @@ public class BookingServiceImpl implements BookingService {
                         driver.getMobileNumber(),
                         driver.getLicenceNumber()
                 );
+
+        return UpdateBookingResponseDto.builder()
+                .bookingId(booking.getId())
+                .bookingStatus(booking.getBookingStatus())
+                .driver(driverResponseDto)
+                .passenger(passengerResponseDto)
+                .build();
+    }
+
+    @Override
+    public UpdateBookingResponseDto getBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                        new RuntimeException("Booking not found"));
+
+        Passenger passenger = booking.getPassenger();
+        PassengerResponseDto passengerResponseDto = new PassengerResponseDto(
+                        passenger.getId(),
+                        passenger.getName(),
+                        passenger.getPhoneNumber()
+                );
+        DriverResponseDto driverResponseDto = null;
+
+        if (booking.getDriver() != null) {
+            Driver driver = booking.getDriver();
+
+            driverResponseDto = new DriverResponseDto(
+                            driver.getId(),
+                            driver.getName(),
+                            driver.getMobileNumber(),
+                            driver.getLicenceNumber()
+            );
+        }
 
         return UpdateBookingResponseDto.builder()
                 .bookingId(booking.getId())
