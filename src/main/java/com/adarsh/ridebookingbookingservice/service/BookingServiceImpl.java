@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class BookingServiceImpl implements BookingService {
@@ -32,6 +34,7 @@ public class BookingServiceImpl implements BookingService {
     private final LocationServiceApi  locationServiceApi;
     private final AuthServiceApi authServiceApi;
     private final SocketServiceApi socketServiceApi;
+    private final ScheduledExecutorService bookingScheduler;
 
     public BookingServiceImpl(PassengerRepository passengerRepository,
                               BookingRepository bookingRepository,
@@ -39,7 +42,8 @@ public class BookingServiceImpl implements BookingService {
                               RestTemplate restTemplate,
                               LocationServiceApi locationServiceApi,
                               AuthServiceApi authServiceApi,
-                              SocketServiceApi socketServiceApi) {
+                              SocketServiceApi socketServiceApi,
+                              ScheduledExecutorService bookingScheduler) {
         this.passengerRepository = passengerRepository;
         this.bookingRepository = bookingRepository;
         this.driverRepository = driverRepository;
@@ -47,6 +51,7 @@ public class BookingServiceImpl implements BookingService {
         this.locationServiceApi = locationServiceApi;
         this.authServiceApi = authServiceApi;
         this.socketServiceApi = socketServiceApi;
+        this.bookingScheduler = bookingScheduler;
     }
 
     @Override
@@ -64,10 +69,7 @@ public class BookingServiceImpl implements BookingService {
 
         try {
 
-            Response<AuthValidationResponseDto> response =
-                    authServiceApi.validateToken(authRequest)
-                            .execute();
-
+            Response<AuthValidationResponseDto> response = authServiceApi.validateToken(authRequest).execute();
             if(!response.isSuccessful() || response.body() == null) {
                 throw new RuntimeException("Unable to validate token");
             }
@@ -115,12 +117,8 @@ public class BookingServiceImpl implements BookingService {
                         .build();
 
         //check
-        System.out.println(
-                "Searching nearby drivers at: latitude="
-                        + requestDto.getLatitude()
-                        + ", longitude="
-                        + requestDto.getLongitude()
-        );
+        System.out.println("Searching nearby drivers at: latitude=" + requestDto.getLatitude() + ", longitude="
+                        + requestDto.getLongitude());
       // new
         Response<DriverLocationDto[]> nearbyDriverResponse =
                 locationServiceApi.getNearbyDrivers(requestDto)
@@ -167,6 +165,8 @@ public class BookingServiceImpl implements BookingService {
                 .build();
 
         raiseRideRequestAsync(rideRequestDto);
+        // 2-minute ride request timeout
+        scheduleBookingTimeout(newBooking.getId());
 
         return CreateBookingResponseDto.builder()
                 .bookingId(newBooking.getId())
@@ -218,10 +218,8 @@ public class BookingServiceImpl implements BookingService {
                         new RuntimeException("Driver not found")
                 );
 
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() ->
-                        new RuntimeException("Booking not found")
-                );
+        Booking booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                        new RuntimeException("Booking not found"));
 
         // new change
         if (booking.getBookingStatus() != BookingStatus.ASSIGNING_DRIVER) {
@@ -230,7 +228,6 @@ public class BookingServiceImpl implements BookingService {
 
         if (booking.getDriver() != null &&
                 !booking.getDriver().getId().equals(driver.getId())) {
-
             throw new RuntimeException("Booking is already assigned to another driver");
         }
 
@@ -246,10 +243,8 @@ public class BookingServiceImpl implements BookingService {
 
         System.out.println("Rows updated");
 
-        booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() ->
-                        new RuntimeException("Booking not found")
-                );
+        booking = bookingRepository.findById(bookingId).orElseThrow(() ->
+                        new RuntimeException("Booking not found"));
 
         Passenger passenger = booking.getPassenger();
         PassengerResponseDto passengerResponseDto = new PassengerResponseDto(
@@ -278,14 +273,6 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public UpdateBookingResponseDto internalUpdateBooking(Long bookingId, InternalBookingUpdateRequestDto requestDto) {
-      /*  Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() ->
-                        new RuntimeException("Booking not found"));
-
-        // Only an unassigned booking can be assigned
-        if (booking.getBookingStatus() != BookingStatus.ASSIGNING_DRIVER) {
-            throw new RuntimeException("Booking already assigned");
-        }  */
 
         if (requestDto.getDriverId() == null) {
             throw new RuntimeException("Driver ID is required");
@@ -294,7 +281,7 @@ public class BookingServiceImpl implements BookingService {
         Driver driver = driverRepository.findById(requestDto.getDriverId())
                 .orElseThrow(() -> new RuntimeException("Driver not found"));
 
-        // TEMPORARY - only for concurrency testing
+        // TEMPORARY - only for concurrency testing no 2 driver can accept same ride
         try {
             Thread.sleep(3000);
         } catch (InterruptedException e) {
@@ -374,17 +361,14 @@ public class BookingServiceImpl implements BookingService {
     }
 
 
-    public void processNearbyDriversAsync(
-            NearByDriversLocationRequestDto nearByDriversLocationRequestDto,
+    public void processNearbyDriversAsync(NearByDriversLocationRequestDto nearByDriversLocationRequestDto,
             Long bookingId) {
 
         // checking
         System.out.println("processNearbyDriversAsync CALLED");
         System.out.println("Booking ID: " + bookingId);
 
-
         Call<DriverLocationDto[]> call = locationServiceApi.getNearbyDrivers(nearByDriversLocationRequestDto);
-
         call.enqueue(new Callback<DriverLocationDto[]>() {
 
             @Override
@@ -453,6 +437,30 @@ public class BookingServiceImpl implements BookingService {
             }
         });
 
+
+    }
+
+
+    private void scheduleBookingTimeout(Long bookingId) {
+        bookingScheduler.schedule(() -> {
+            try {
+                System.out.println("Checking booking timeout for booking: " + bookingId);
+                int updatedRows = bookingRepository.markBookingAsNoDriverAvailable(bookingId,
+                        BookingStatus.ASSIGNING_DRIVER,
+                        BookingStatus.NO_DRIVER_AVAILABLE);
+
+                if (updatedRows == 1) {
+                    System.out.println("Booking " + bookingId + " expired. No driver accepted the ride.");
+                } else {
+                    System.out.println("Booking " + bookingId + " was already assigned or otherwise completed.");
+                }
+
+            } catch (Exception e) {
+                System.out.println("Error while processing booking timeout: " + bookingId);
+                e.printStackTrace();
+            }
+
+        }, 2, TimeUnit.MINUTES);
 
     }
 

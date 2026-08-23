@@ -1,7 +1,5 @@
 package com.adarsh.ridebookingbookingservice.service;
-
 import com.adarsh.ridebookingbookingservice.dtos.*;
-
 import java.io.IOException;
 
 public interface BookingService {
@@ -9,4 +7,5 @@ public interface BookingService {
     UpdateBookingResponseDto updateBooking(Long bookingId,String authHeader,UpdateBookingRequestDto requestDto);
     UpdateBookingResponseDto internalUpdateBooking(Long bookingId, InternalBookingUpdateRequestDto requestDto);
     public UpdateBookingResponseDto getBooking(Long bookingId);
+
 }

@@ -52,4 +52,24 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("driver") Driver driver
     );
 
+    // changing driver status after timeout
+
+    @Modifying(
+            clearAutomatically = true,
+            flushAutomatically = true
+    )
+    @Transactional
+    @Query("""
+    UPDATE Booking b
+    SET b.bookingStatus = :newStatus
+    WHERE b.id = :bookingId
+      AND b.bookingStatus = :currentStatus
+      AND b.driver IS NULL
+    """)
+    int markBookingAsNoDriverAvailable(
+            @Param("bookingId") Long bookingId,
+            @Param("currentStatus") BookingStatus currentStatus,
+            @Param("newStatus") BookingStatus newStatus
+    );
+
 }
